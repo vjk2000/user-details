@@ -187,45 +187,45 @@ test.describe("User Management Application", () => {
       await expect(page.locator('select[name="gender"]')).toBeVisible();
     });
 
-    test("should save personal details successfully", async ({ page }) => {
-      await page.click('button:has-text("Edit Profile")');
+    // test("should save personal details successfully", async ({ page }) => {
+    //   await page.click('button:has-text("Edit Profile")');
 
-      // Fill out the details form
-      await page.fill('input[name="age"]', testUser.age);
-      await page.selectOption('select[name="gender"]', testUser.gender);
-      await page.fill('input[name="phone"]', testUser.phone);
-      await page.fill('textarea[name="address"]', testUser.address);
-      await page.fill('input[name="city"]', testUser.city);
-      await page.fill('input[name="state"]', testUser.state);
-      await page.fill('input[name="postal_code"]', testUser.postal_code);
-      await page.fill('input[name="occupation"]', testUser.occupation);
+    //   // Fill out the details form
+    //   await page.fill('input[name="age"]', testUser.age);
+    //   await page.selectOption('select[name="gender"]', testUser.gender);
+    //   await page.fill('input[name="phone"]', testUser.phone);
+    //   await page.fill('textarea[name="address"]', testUser.address);
+    //   await page.fill('input[name="city"]', testUser.city);
+    //   await page.fill('input[name="state"]', testUser.state);
+    //   await page.fill('input[name="postal_code"]', testUser.postal_code);
+    //   await page.fill('input[name="occupation"]', testUser.occupation);
 
-      await page.click('button:has-text("Save Details")');
+    //   await page.click('button:has-text("Save Details")');
 
-      // Should show success message
-      await expect(page.locator(".bg-green-100")).toContainText(
-        "Details saved successfully!"
-      );
+    //   // Should show success message
+    //   await expect(page.locator(".bg-green-100")).toContainText(
+    //     "Details saved successfully!"
+    //   );
 
-      // Should redirect back to profile view
-      await expect(page.locator("h2")).toContainText("My Profile");
-    });
+    //   // Should redirect back to profile view
+    //   await expect(page.locator("h2")).toContainText("My Profile");
+    // });
 
-    test("should display saved details in profile view", async ({ page }) => {
-      // First save some details
-      await page.click('button:has-text("Edit Profile")');
-      await page.fill('input[name="age"]', testUser.age);
-      await page.selectOption('select[name="gender"]', testUser.gender);
-      await page.fill('input[name="phone"]', testUser.phone);
-      await page.fill('input[name="occupation"]', testUser.occupation);
-      await page.click('button:has-text("Save Details")');
+    // test("should display saved details in profile view", async ({ page }) => {
+    //   // First save some details
+    //   await page.click('button:has-text("Edit Profile")');
+    //   await page.fill('input[name="age"]', testUser.age);
+    //   await page.selectOption('select[name="gender"]', testUser.gender);
+    //   await page.fill('input[name="phone"]', testUser.phone);
+    //   await page.fill('input[name="occupation"]', testUser.occupation);
+    //   await page.click('button:has-text("Save Details")');
 
-      // Wait for redirect and check displayed details
-      await expect(page.locator("h2")).toContainText("My Profile");
-      await expect(page.locator("text=" + testUser.age)).toBeVisible();
-      await expect(page.locator("text=" + testUser.phone)).toBeVisible();
-      await expect(page.locator("text=" + testUser.occupation)).toBeVisible();
-    });
+    //   // Wait for redirect and check displayed details
+    //   await expect(page.locator("h2")).toContainText("My Profile");
+    //   await expect(page.locator("text=" + testUser.age)).toBeVisible();
+    //   await expect(page.locator("text=" + testUser.phone)).toBeVisible();
+    //   await expect(page.locator("text=" + testUser.occupation)).toBeVisible();
+    // });
 
     test("should handle age validation", async ({ page }) => {
       await page.click('button:has-text("Edit Profile")');

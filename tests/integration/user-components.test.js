@@ -1,90 +1,93 @@
-// import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-// import SignIn from "../../src/components/SignIn";
-// import DetailsForm from "../../src/components/DetailsForm";
-// import { apiCall } from "../../src/utils/api";
+// // tests/profile.spec.js
+// const { test, expect, TEST_USERS, TEST_DETAILS, ProfilePage, DetailsFormPage, NavbarComponent } = require('./fixtures/test-setup');
 
-// // Mock the API utility
-// jest.mock("../../src/utils/api");
-// const mockApiCall = apiCall;
-
-// describe("Authentication Components Integration", () => {
-//   test("SignIn component integrates with API service", async () => {
-//     // Mock API response
-//     mockApiCall.mockResolvedValue({
-//       user: { id: "123", name: "John Doe", email: "john@example.com" },
+// test.describe('Profile Management', () => {
+//   test.describe('Profile View', () => {
+//     test('should display user profile information', async ({ authenticatedPage }) => {
+//       const profilePage = new ProfilePage(authenticatedPage);
+      
+//       // Should already be on profile page from fixture
+//       await expect(authenticatedPage.locator('h2')).toHaveText('My Profile');
+      
+//       // Check user information is displayed
+//       await expect(profilePage.userName).toHaveText(TEST_USERS.EXISTING_USER.name);
+//       await expect(profilePage.userEmail).toHaveText(TEST_USERS.EXISTING_USER.email);
+      
+//       // Check that Edit Profile button is visible
+//       await expect(profilePage.editButton).toBeVisible();
 //     });
 
-//     const onSuccess = jest.fn();
-
-//     render(<SignIn onSuccess={onSuccess} onSwitchToSignUp={() => {}} />);
-
-//     // User interaction
-//     fireEvent.change(screen.getByLabelText(/email/i), {
-//       target: { value: "john@example.com" },
+//     test('should display existing user details when available', async ({ authenticatedPage }) => {
+//       // Navigate to profile page
+//       await authenticatedPage.goto('/profile');
+      
+//       // Check that existing details are displayed (from mock server)
+//       await expect(authenticatedPage.locator('text=30')).toBeVisible(); // Age
+//       await expect(authenticatedPage.locator('text=Male')).toBeVisible(); // Gender
+//       await expect(authenticatedPage.locator('text=+1234567890')).toBeVisible(); // Phone
+//       await expect(authenticatedPage.locator('text=Software Engineer')).toBeVisible(); // Occupation
 //     });
-//     fireEvent.change(screen.getByLabelText(/password/i), {
-//       target: { value: "password123" },
-//     });
-//     fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
 
-//     // Verify integration
-//     await waitFor(() => {
-//       expect(mockApiCall).toHaveBeenCalledWith("/signin", {
-//         method: "POST",
-//         body: JSON.stringify({
-//           email: "john@example.com",
-//           password: "password123",
-//         }),
+//     test('should show "Not specified" for empty fields', async ({ page }) => {
+//       // Sign in with a user that has no details
+//       await page.goto('/signin');
+//       await page.fill('input[name="email"]', 'jane@example.com');
+//       await page.fill('input[name="password"]', 'password456');
+//       await page.click('button[type="button"]:has-text("Sign In")');
+      
+//       await page.waitForURL('/profile');
+      
+//       // Check that empty fields show "Not specified"
+//       await expect(page.locator('text=Not specified')).toHaveCount(5); // Multiple empty fields
+//     });
+
+//     test('should navigate to edit profile when clicking edit button', async ({ authenticatedPage }) => {
+//       const profilePage = new ProfilePage(authenticatedPage);
+      
+//       await profilePage.editProfile();
+//       await expect(authenticatedPage).toHaveURL('/edit-profile');
+//     });
+
+//     test('should handle profile loading error gracefully', async ({ page }) => {
+//       // Mock API failure by going to a non-existent user
+//       await page.route('**/api/user/*/details', route => {
+//         route.fulfill({
+//           status: 500,
+//           contentType: 'application/json',
+//           body: JSON.stringify({ error: 'Server error' })
+//         });
 //       });
-//       expect(onSuccess).toHaveBeenCalledWith({
-//         user: { id: "123", name: "John Doe", email: "john@example.com" },
-//       });
+      
+//       // Sign in
+//       await page.goto('/signin');
+//       await page.fill('input[name="email"]', TEST_USERS.EXISTING_USER.email);
+//       await page.fill('input[name="password"]', TEST_USERS.EXISTING_USER.password);
+//       await page.click('button[type="button"]:has-text("Sign In")');
+      
+//       await page.waitForURL('/profile');
+      
+//       // Should show error message and retry button
+//       await expect(page.locator('[class*="bg-red-100"]')).toHaveText('Failed to load user details');
+//       await expect(page.locator('button:has-text("Retry")')).toBeVisible();
 //     });
 //   });
 
-//   test("DetailsForm integrates with user state and API", async () => {
-//     const mockUser = { id: "123", name: "John Doe", email: "john@example.com" };
-//     const onDetailsComplete = jest.fn();
-
-//     // Mock API calls
-//     mockApiCall
-//       .mockResolvedValueOnce({ age: "", gender: "", phone: "" }) // GET details
-//       .mockResolvedValueOnce({ success: true }); // POST details
-
-//     render(
-//       <DetailsForm
-//         user={mockUser}
-//         onLogout={() => {}}
-//         onDetailsComplete={onDetailsComplete}
-//       />
-//     );
-
-//     // Fill form
-//     fireEvent.change(screen.getByLabelText(/age/i), {
-//       target: { value: "30" },
-//     });
-//     fireEvent.change(screen.getByLabelText(/phone/i), {
-//       target: { value: "+1234567890" },
+//   test.describe('Profile Editing', () => {
+//     test('should load existing details in edit form', async ({ authenticatedPage }) => {
+//       const profilePage = new ProfilePage(authenticatedPage);
+//       const detailsForm = new DetailsFormPage(authenticatedPage);
+      
+//       await profilePage.editProfile();
+      
+//       // Check that form is populated with existing data
+//       await expect(detailsForm.ageInput).toHaveValue('30');
+//       await expect(detailsForm.genderSelect).toHaveValue('male');
+//       await expect(detailsForm.phoneInput).toHaveValue('+1234567890');
+//       await expect(detailsForm.occupationInput).toHaveValue('Software Engineer');
 //     });
 
-//     // Submit
-//     fireEvent.click(screen.getByRole("button", { name: /save details/i }));
-
-//     // Verify integration
-//     await waitFor(() => {
-//       expect(mockApiCall).toHaveBeenCalledWith("/user/123/details", {
-//         method: "POST",
-//         body: JSON.stringify({
-//           age: "30",
-//           gender: "",
-//           phone: "+1234567890",
-//           address: "",
-//           city: "",
-//           state: "",
-//           postal_code: "",
-//           occupation: "",
-//         }),
-//       });
-//     });
-//   });
-// });
+//     test('should successfully save complete profile details', async ({ authenticatedPage }) => {
+//       const profilePage = new ProfilePage(authenticatedPage);
+//       const detailsForm = new DetailsFormPage(authenticatedPage);
+      
+//       await profilePage.editProfile
