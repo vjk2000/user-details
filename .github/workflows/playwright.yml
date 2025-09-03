@@ -1,4 +1,4 @@
-name: Playwright CI
+name: Playwright CI (build+serve)
 
 on: [push, pull_request]
 
@@ -6,9 +6,12 @@ jobs:
   test:
     runs-on: ubuntu-latest
     env:
-      # set the baseURL that your tests rely on (page.goto('/signin') -> http://localhost:3000/signin)
       PLAYWRIGHT_BASE_URL: http://localhost:3000
       MOCK_API_URL: http://localhost:5000
+      # If your frontend uses CRA, set REACT_APP_API_BASE_URL
+      # If Vite, set VITE_API_URL instead. Set the one your app reads.
+      REACT_APP_API_BASE_URL: http://localhost:5000
+      VITE_API_URL: http://localhost:5000
 
     steps:
       - uses: actions/checkout@v4
@@ -17,51 +20,70 @@ jobs:
         with:
           node-version: 18
 
-      - name: Cache node modules
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-
       - name: Install dependencies
         run: npm ci
 
-      - name: Cache Playwright browsers
-        id: playwright-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-browsers-${{ hashFiles('**/package-lock.json') }}
-
-      - name: Install Playwright browsers (if cache miss)
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps
-
-      # Start mock API
       - name: Start mock API (background)
         run: |
-          # start mock server in background and save pid
           node tests/start-mock-server.js > mock-server.log 2>&1 &
           echo $! > .mock_pid
-          echo "Mock API started (pid $(cat .mock_pid)). Logs -> mock-server.log"
+          echo "Mock API started (pid $(cat .mock_pid))"
 
-      # Start frontend (adjust the command to your project e.g. `npm run dev` or `npm start`)
-      - name: Start frontend (background)
+      - name: Build frontend
+        # Important: set the env var your build reads (REACT_APP_*/VITE_*)
+        # This bakes the API URL into the static bundle so it calls the mock server at runtime.
+        env:
+          REACT_APP_API_BASE_URL: ${{ env.MOCK_API_URL }}
+          VITE_API_URL: ${{ env.MOCK_API_URL }}
         run: |
-          # change `npm run start` to your actual dev command if different (e.g., npm run dev)
-          npm run start > frontend.log 2>&1 &
+          # Replace with your actual build command:
+          # CRA -> npm run build  (output: ./build)
+          # Vite -> npm run build (output: ./dist)
+          npm run build
+          ls -la
+
+      - name: Serve static build (background)
+        run: |
+          # If CRA -> serve ./build ; if Vite -> serve ./dist
+          # We try build -> ./build first, fallback to ./dist.
+          if [ -d "./build" ]; then
+            npx serve -s build -l 3000 > frontend.log 2>&1 &
+          elif [ -d "./dist" ]; then
+            npx serve -s dist -l 3000 > frontend.log 2>&1 &
+          else
+            echo "No build output found (no ./build or ./dist). Aborting."
+            exit 1
+          fi
           echo $! > .frontend_pid
-          echo "Frontend started (pid $(cat .frontend_pid)). Logs -> frontend.log"
+          echo "Frontend served (pid $(cat .frontend_pid)). Logs -> frontend.log"
 
-      # Wait for both servers to be available
-      - name: Wait for services to be ready
+      - name: Wait for services (curl loop)
         run: |
-          # wait-on is available via npx without installing as a dev dep
-          npx wait-on http://localhost:5000 || (cat mock-server.log && exit 1)
-          npx wait-on ${PLAYWRIGHT_BASE_URL} || (cat frontend.log && exit 1)
-          echo "Both mock API and frontend are responding."
+          set -e
+          echo "Checking mock API and frontend up..."
+          max_retries=30
+          retry=0
+          until curl -sSf http://localhost:5000/api/health >/dev/null 2>&1 && curl -sSf http://localhost:3000/ >/dev/null 2>&1; do
+            retry=$((retry+1))
+            echo "Waiting for services to respond (attempt $retry/$max_retries)..."
+            if [ "$retry" -ge "$max_retries" ]; then
+              echo "Services did not become ready in time. Dumping logs for debugging:"
+              echo "---- mock-server.log ----"
+              sed -n '1,200p' mock-server.log || true
+              echo "---- frontend.log ----"
+              sed -n '1,200p' frontend.log || true
+              exit 1
+            fi
+            sleep 2
+          done
+          echo "Services are ready."
+
+      - name: Install Playwright browsers (fast path)
+        run: npx playwright install --with-deps
 
       - name: Run Playwright tests
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ env.PLAYWRIGHT_BASE_URL }}
         run: npx playwright test --reporter=list
 
       - name: Upload Playwright report
@@ -71,7 +93,7 @@ jobs:
           name: playwright-report
           path: playwright-report/
 
-      - name: Upload logs (mock + frontend) for debugging
+      - name: Upload logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
