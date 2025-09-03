@@ -1,85 +1,31 @@
-# name: Quick Playwright Test
-
-# on:
-#   push:
-#   pull_request:
-
-# jobs:
-#   test:
-#     runs-on: ubuntu-latest
-#     steps:
-#     - uses: actions/checkout@v4
-    
-#     - uses: actions/setup-node@v4
-#       with:
-#         node-version: '18'
-    
-#     - name: Install and setup
-#       run: npm ci
-        
-#     - name: Run tests
-#       run: npx playwright test
-      
-#     - uses: actions/upload-artifact@v4
-#       if: always()
-#       with:
-#         name: report
-#         path: playwright-report/
-#         if-no-files-found: ignore
-
-
-
-name: Playwright CI
+name: Quick Playwright Test
 
 on:
   push:
   pull_request:
 
-env:
-  FRONTEND_DIR: .          # change to "frontend" if your React app is in ./frontend
-  BACKEND_DIR: .           # change to "backend" if your Flask app is in ./backend
-  FLASK_APP: app           # change to your module/file (e.g., "app.py" or "wsgi:app")
-  FLASK_RUN_PORT: 5000
-  PORT: 3000
-
 jobs:
-  e2e:
+  test:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
+    
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    
+    - name: Install and setup
+      run: npm ci
+        
+    - name: Run tests
+      run: npx playwright test
+      
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: report
+        path: playwright-report/
+        if-no-files-found: ignore
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 18
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      # Ensure pip-installed CLI scripts (like `flask`) are on PATH
-      - name: Add user base bin to PATH
-        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Install frontend deps
-        working-directory: ${{ env.FRONTEND_DIR }}
-        run: npm ci
-
-      - name: Install backend deps
-        working-directory: ${{ env.BACKEND_DIR }}
-        run: pip install --user -r requirements.txt
-
-      - name: Install Playwright browsers & OS deps
-        run: npx playwright install --with-deps
-
-      - name: Run Playwright tests
-        run: npx playwright test
-
-      - name: Upload Playwright report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: playwright-report/
-          if-no-files-found: ignore
 
