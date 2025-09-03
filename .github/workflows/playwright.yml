@@ -15,37 +15,8 @@ jobs:
         node-version: '18'
     
     - name: Install and setup
-      run: |
-        npm ci
-        npx playwright install --with-deps
+      run: npm ci
         
-        # Create basic test if none exists
-        mkdir -p tests
-        if [ ! -f "tests/basic.spec.js" ]; then
-          cat > tests/basic.spec.js << 'EOF'
-        const { test, expect } = require('@playwright/test');
-        test('basic test', async ({ page }) => {
-          await page.goto('http://localhost:3000');
-          await expect(page).toHaveTitle(/React/);
-        });
-        EOF
-        fi
-        
-        # Create basic config if none exists  
-        if [ ! -f "playwright.config.js" ]; then
-          cat > playwright.config.js << 'EOF'
-        module.exports = {
-          testDir: './tests',
-          use: { baseURL: 'http://localhost:3000' },
-          webServer: {
-            command: 'npm start',
-            url: 'http://localhost:3000',
-            reuseExistingServer: !process.env.CI,
-          },
-        };
-        EOF
-        fi
-    
     - name: Run tests
       run: npx playwright test
       
