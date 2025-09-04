@@ -2,30 +2,52 @@ name: Quick Playwright Test
 
 on:
   push:
+    branches: [ main, develop ]
   pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch: # Allows manual triggering
 
 jobs:
   test:
+    timeout-minutes: 60
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        browser: [chromium, firefox, webkit]
+
     steps:
-    - uses: actions/checkout@v4
-    
-    - uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-    
-    - name: Install and setup
-      run: npm ci
-        
-    - name: Run tests
-      run: npx playwright test
-      
-    - uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: report
-        path: playwright-report/
-        if-no-files-found: ignore
+      # 👇 Checkout source code
+      - uses: actions/checkout@v4
 
+      # 👇 Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
 
+      # 👇 Install dependencies
+      - name: Install dependencies
+        run: npm ci
 
+      # 👇 Install Playwright Browsers
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      # 👇 Run Playwright tests
+      - name: Run Playwright Tests
+        run: npx playwright test
+        env:
+          BROWSER: ${{ matrix.browser }}
+          CI: true
+
+      # 👇 Upload Playwright HTML report
+      - name: Upload Playwright Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-${{ matrix.browser }}
+          path: playwright-report/
+          if-no-files-found: ignore
+          retention-days: 30
